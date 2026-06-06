@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import Navbar from '../Components/Navbar'
 import Footer from '../Components/Footer'
 import useFadeUp from '../Components/useFadeUp'
+import { registerSeller } from '../services/api'
 import '../Asset/CSS/style.css'
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -10,7 +11,8 @@ const phoneRegex = /^(\+91[\s-]?)?[6-9]\d{9}$/
 
 export default function Seller() {
   useFadeUp()
-  const [form, setForm] = useState({ name: '', email: '', shop: '', phone: '', product: '', city: '', address: '', agree: false })
+  const [form, setForm] = useState({ name: '', email: '', shopName: '', phone: '', password: '', category: '', shopAddress: '', agree: false })
+  const [showPw, setShowPw] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
 
@@ -19,28 +21,29 @@ export default function Seller() {
     setForm(f => ({ ...f, [name]: type === 'checkbox' ? checked : value }))
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     setSuccess(false)
     setError('')
-    const { name, email, shop, phone, product, city, address, agree } = form
+    const { name, email, shopName, phone, password, category, shopAddress, agree } = form
 
     if (!name || name.length < 2) return showError('Enter a valid seller name.')
     if (!emailRegex.test(email)) return showError('Enter a valid email address.')
-    if (!shop || shop.length < 2) return showError('Enter your pet shop name.')
+    if (!shopName || shopName.length < 2) return showError('Enter your pet shop name.')
     if (!phoneRegex.test(phone)) return showError('Enter a valid 10-digit phone number.')
-    if (!product) return showError('Please select a product type.')
-    if (!city) return showError('Enter your city.')
-    if (!address || address.length < 10) return showError('Enter a complete shop address.')
+    if (!password || password.length < 6) return showError('Password must be at least 6 characters.')
+    if (!category) return showError('Please select a product category.')
+    if (!shopAddress || shopAddress.length < 10) return showError('Enter a complete shop address.')
     if (!agree) return showError('Please agree to the Terms & Conditions.')
 
-    const sellers = JSON.parse(localStorage.getItem('petzoneSellerss') || '[]')
-    sellers.push({ name, email, shop, phone, product, city, address, date: new Date().toLocaleString() })
-    localStorage.setItem('petzoneSellerss', JSON.stringify(sellers))
-
-    setSuccess(true)
-    setForm({ name: '', email: '', shop: '', phone: '', product: '', city: '', address: '', agree: false })
-    setTimeout(() => setSuccess(false), 6000)
+    try {
+      await registerSeller({ name, email, shopName, phone, password, category, shopAddress })
+      setSuccess(true)
+      setForm({ name: '', email: '', shopName: '', phone: '', password: '', category: '', shopAddress: '', agree: false })
+      setTimeout(() => setSuccess(false), 6000)
+    } catch (err) {
+      showError(err.response?.data?.message || 'Registration failed. Please try again.')
+    }
   }
 
   function showError(msg) {
@@ -96,16 +99,23 @@ export default function Seller() {
                     </div>
                     <div className="col-md-6">
                       <label className="form-label fw-semibold">Pet Shop Name *</label>
-                      <input type="text" name="shop" className="form-control" placeholder="Your shop name" value={form.shop} onChange={handleChange} />
+                      <input type="text" name="shopName" className="form-control" placeholder="Your shop name" value={form.shopName} onChange={handleChange} />
                     </div>
                     <div className="col-md-6">
                       <label className="form-label fw-semibold">Phone Number *</label>
                       <input type="text" name="phone" className="form-control" placeholder="+91 XXXXX XXXXX" value={form.phone} onChange={handleChange} />
                     </div>
                     <div className="col-md-6">
-                      <label className="form-label fw-semibold">Product Type *</label>
-                      <select name="product" className="form-select" value={form.product} onChange={handleChange}>
-                        <option value="">Select product type</option>
+                      <label className="form-label fw-semibold">Password *</label>
+                      <div className="password-wrapper">
+                        <input type={showPw ? 'text' : 'password'} name="password" className="form-control" placeholder="Min 6 characters" value={form.password} onChange={handleChange} />
+                        <button type="button" className="toggle-pw" onClick={() => setShowPw(v => !v)}>{showPw ? '🙈' : '👁️'}</button>
+                      </div>
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">Product Category *</label>
+                      <select name="category" className="form-select" value={form.category} onChange={handleChange}>
+                        <option value="">Select category</option>
                         <option>Live Pets</option>
                         <option>Pet Food</option>
                         <option>Pet Accessories</option>
@@ -114,13 +124,9 @@ export default function Seller() {
                         <option>All of the above</option>
                       </select>
                     </div>
-                    <div className="col-md-6">
-                      <label className="form-label fw-semibold">City *</label>
-                      <input type="text" name="city" className="form-control" placeholder="Your city" value={form.city} onChange={handleChange} />
-                    </div>
                     <div className="col-12">
                       <label className="form-label fw-semibold">Shop Address *</label>
-                      <textarea name="address" className="form-control" rows="3" placeholder="Full shop address" value={form.address} onChange={handleChange}></textarea>
+                      <textarea name="shopAddress" className="form-control" rows="3" placeholder="Full shop address (min 10 characters)" value={form.shopAddress} onChange={handleChange}></textarea>
                     </div>
                     <div className="col-12">
                       <div className="form-check">

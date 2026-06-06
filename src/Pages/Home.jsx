@@ -28,13 +28,13 @@ export default function Home() {
       <Navbar />
 
       {/* HERO */}
-      <section className="hero-section">
+      <section className="hero-section" style={{ background: 'linear-gradient(135deg, #1a3c2e 0%, #2d6a4f 60%, #40916c 100%)' }}>
         <div className="container">
           <div className="row align-items-center">
-            <div className="col-lg-6 fade-up">
-              <p style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '1rem' }}>🐾 India's #1 Pet Platform</p>
-              <h1>Everything Your<br /><span>Pet Needs</span><br />in One Place</h1>
-              <p>Food, toys, healthcare, adoption and more for your furry friends. Trusted by 50,000+ pet lovers.</p>
+            <div className="col-lg-6 fade-up" style={{ color: 'white' }}>
+              <p style={{ color: '#95d5b2', fontWeight: 700, fontSize: '1rem' }}>🐾 India's #1 Pet Platform</p>
+              <h1 style={{ color: 'white' }}>Everything Your<br /><span style={{ color: '#95d5b2' }}>Pet Needs</span><br />in One Place</h1>
+              <p style={{ color: 'rgba(255,255,255,0.85)' }}>Food, toys, healthcare, adoption and more for your furry friends. Trusted by 50,000+ pet lovers.</p>
               <div className="d-flex gap-3 flex-wrap">
                 <Link to="/adoption" className="btn-primary-custom">Adopt a Pet 🐶</Link>
                 <Link to="/seller" className="btn-outline-custom">Become a Seller</Link>

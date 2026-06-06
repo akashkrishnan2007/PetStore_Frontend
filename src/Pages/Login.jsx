@@ -4,6 +4,8 @@ import Navbar from '../Components/Navbar'
 import Footer from '../Components/Footer'
 import useFadeUp from '../Components/useFadeUp'
 import { useAuth } from '../Context/AuthContext'
+import { loginUser } from '../services/api'
+import Spinner from '../Components/Spinner'
 import '../Asset/CSS/style.css'
 
 import dogcatImg from '../Asset/Images/dogcat.png'
@@ -18,6 +20,7 @@ export default function Login() {
   const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem('petzoneRememberEmail')
@@ -29,7 +32,7 @@ export default function Login() {
     setForm(f => ({ ...f, [name]: type === 'checkbox' ? checked : value }))
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     setError('')
     setSuccess('')
@@ -38,21 +41,18 @@ export default function Login() {
     if (!emailRegex.test(email)) return showError('Please enter a valid email address.')
     if (password.length < 6) return showError('Password must be at least 6 characters.')
 
-    const storedUser = JSON.parse(localStorage.getItem('petzoneUser') || 'null')
-    if (storedUser && storedUser.email === email && storedUser.password === password) {
+    setLoading(true)
+    try {
+      const { data } = await loginUser({ email, password })
       if (remember) localStorage.setItem('petzoneRememberEmail', email)
       else localStorage.removeItem('petzoneRememberEmail')
-      login(storedUser)
-      setSuccess(`✅ Welcome back, ${storedUser.name}! Redirecting...`)
+      login(data.user, data.token)
+      setSuccess(`✅ Welcome back, ${data.user.firstname}! Redirecting...`)
       setTimeout(() => navigate('/'), 1800)
-    } else if (email && password.length >= 6) {
-      if (remember) localStorage.setItem('petzoneRememberEmail', email)
-      const demoUser = { name: email.split('@')[0], email }
-      login(demoUser)
-      setSuccess('✅ Login successful! Redirecting...')
-      setTimeout(() => navigate('/'), 1800)
-    } else {
-      showError('Invalid email or password. Please try again.')
+    } catch (err) {
+      showError(err.response?.data?.message || 'Invalid email or password.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -99,7 +99,9 @@ export default function Login() {
                     </div>
                     <Link to="/forgot" style={{ color: 'var(--primary)', fontSize: '0.9rem', fontWeight: 600 }}>Forgot Password?</Link>
                   </div>
-                  <button type="submit" className="btn-primary-custom w-100">Sign In →</button>
+                  <button type="submit" className="btn-primary-custom w-100" disabled={loading}>
+                    {loading ? <><Spinner />Signing in...</> : 'Sign In →'}
+                  </button>
                 </form>
                 <div className="divider mt-4">or</div>
                 <p className="text-center mt-3" style={{ fontSize: '0.9rem' }}>Don't have an account? <Link to="/signup" style={{ color: 'var(--primary)', fontWeight: 700 }}>Sign Up Free</Link></p>

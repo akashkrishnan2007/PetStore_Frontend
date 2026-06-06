@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { loginAdmin } from '../services/api'
 import '../Asset/CSS/admin.css'
-
-const ADMIN_EMAIL    = 'admin@petzone.com'
-const ADMIN_PASSWORD = 'Admin123'
 const emailRegex     = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export default function AdminLogin() {
@@ -23,7 +21,7 @@ export default function AdminLogin() {
     setForm(f => ({ ...f, [name]: type === 'checkbox' ? checked : value }))
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     setError('')
     const { email, password, remember } = form
@@ -32,17 +30,18 @@ export default function AdminLogin() {
     if (!password) return setError('❌ Please enter your password.')
 
     setLoading(true)
-    setTimeout(() => {
-      if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-        if (remember) localStorage.setItem('petzoneAdminEmail', email)
-        else localStorage.removeItem('petzoneAdminEmail')
-        sessionStorage.setItem('petzoneAdminAuth', 'true')
-        navigate('/admin/dashboard')
-      } else {
-        setError('❌ Invalid email or password. Please try again.')
-        setLoading(false)
-      }
-    }, 800)
+    try {
+      const { data } = await loginAdmin({ email, password })
+      if (remember) localStorage.setItem('petzoneAdminEmail', email)
+      else localStorage.removeItem('petzoneAdminEmail')
+      sessionStorage.setItem('petzoneAdminAuth', 'true')
+      if (data.token) localStorage.setItem('petzoneAdminToken', data.token)
+      navigate('/admin/dashboard')
+    } catch (err) {
+      setError('❌ ' + (err.response?.data?.message || 'Invalid email or password.'))
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

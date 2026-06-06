@@ -1,23 +1,36 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../Components/Navbar'
 import Footer from '../Components/Footer'
 import useFadeUp from '../Components/useFadeUp'
 import { useAuth } from '../Context/AuthContext'
+import { getProfile, getAdoptions } from '../services/api'
 import '../Asset/CSS/style.css'
 
 export default function Profile() {
   useFadeUp()
   const { user, login, logout, showToast } = useAuth()
   const navigate = useNavigate()
-  const [form, setForm] = useState({ name: user?.name || '', email: user?.email || '', phone: user?.phone || '' })
+  const [form, setForm] = useState({ firstname: user?.firstname || '', lastname: user?.lastname || '', email: user?.email || '', phone: user?.phone || '' })
   const [editing, setEditing] = useState(false)
-  const [success, setSuccess] = useState('')
+  const [adoptions, setAdoptions] = useState([])
 
-  const adoptions = JSON.parse(localStorage.getItem('petzoneAdoptions') || '[]')
-    .filter(a => a.email === user?.email)
-  const contacts = JSON.parse(localStorage.getItem('petzoneContacts') || '[]')
-    .filter(c => c.email === user?.email)
+  useEffect(() => {
+    getProfile()
+      .then(({ data }) => {
+        const u = data.user || data
+        login(u, localStorage.getItem('petzoneToken'))
+        setForm({ firstname: u.firstname || '', lastname: u.lastname || '', email: u.email || '', phone: u.phone || '' })
+      })
+      .catch(() => {})
+
+    getAdoptions()
+      .then(({ data }) => {
+        const list = Array.isArray(data) ? data : data.adoptions || []
+        setAdoptions(list.filter(a => a.email === user?.email))
+      })
+      .catch(() => {})
+  }, [])
 
   function handleChange(e) {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }))
@@ -26,8 +39,7 @@ export default function Profile() {
   function handleSave(e) {
     e.preventDefault()
     const updated = { ...user, ...form }
-    localStorage.setItem('petzoneUser', JSON.stringify(updated))
-    login(updated)
+    login(updated, localStorage.getItem('petzoneToken'))
     setEditing(false)
     showToast('✅ Profile updated successfully!', 'success')
   }
@@ -58,23 +70,17 @@ export default function Profile() {
             <div className="col-lg-4">
               <div className="form-card text-center">
                 <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'var(--secondary)', border: '4px solid var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem', margin: '0 auto 1rem' }}>
-                  {user?.name?.[0]?.toUpperCase() || '👤'}
+                  {user?.firstname?.[0]?.toUpperCase() || '👤'}
                 </div>
-                <h4 className="fw-bold">{user?.name}</h4>
+                <h4 className="fw-bold">{user?.firstname} {user?.lastname}</h4>
                 <p style={{ color: 'var(--gray)', fontSize: '0.9rem' }}>{user?.email}</p>
                 {user?.phone && <p style={{ color: 'var(--gray)', fontSize: '0.9rem' }}>📞 {user.phone}</p>}
-                <p style={{ color: 'var(--gray)', fontSize: '0.8rem' }}>Member since {user?.date?.split(',')[0] || 'N/A'}</p>
+                <p style={{ color: 'var(--gray)', fontSize: '0.8rem' }}>Member since {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}</p>
                 <div className="row g-2 mt-3">
                   <div className="col-6">
                     <div style={{ background: 'var(--secondary)', borderRadius: '10px', padding: '0.75rem' }}>
                       <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--primary)' }}>{adoptions.length}</div>
                       <div style={{ fontSize: '0.78rem', color: 'var(--gray)' }}>Adoptions</div>
-                    </div>
-                  </div>
-                  <div className="col-6">
-                    <div style={{ background: 'var(--secondary)', borderRadius: '10px', padding: '0.75rem' }}>
-                      <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--primary)' }}>{contacts.length}</div>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--gray)' }}>Messages</div>
                     </div>
                   </div>
                 </div>
@@ -92,8 +98,12 @@ export default function Profile() {
                 <form onSubmit={handleSave}>
                   <div className="row g-3">
                     <div className="col-md-6">
-                      <label className="form-label fw-semibold">Full Name</label>
-                      <input type="text" name="name" className="form-control" value={form.name} onChange={handleChange} disabled={!editing} />
+                      <label className="form-label fw-semibold">First Name</label>
+                      <input type="text" name="firstname" className="form-control" value={form.firstname} onChange={handleChange} disabled={!editing} />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label fw-semibold">Last Name</label>
+                      <input type="text" name="lastname" className="form-control" value={form.lastname} onChange={handleChange} disabled={!editing} />
                     </div>
                     <div className="col-md-6">
                       <label className="form-label fw-semibold">Email Address</label>

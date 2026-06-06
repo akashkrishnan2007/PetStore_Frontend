@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Navbar from '../Components/Navbar'
 import Footer from '../Components/Footer'
 import useFadeUp from '../Components/useFadeUp'
+import { submitAdoption } from '../services/api'
 import '../Asset/CSS/style.css'
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -26,7 +27,7 @@ export default function Adoption() {
   const [ageFilter, setAgeFilter] = useState('')
   const [filtered, setFiltered] = useState(ALL_PETS)
   const [modal, setModal] = useState(null)
-  const [adoptForm, setAdoptForm] = useState({ name: '', email: '', phone: '', reason: '' })
+  const [adoptForm, setAdoptForm] = useState({ name: '', email: '', phone: '', address: '', reason: '' })
   const [adoptError, setAdoptError] = useState('')
   const [adoptSuccess, setAdoptSuccess] = useState('')
 
@@ -50,26 +51,38 @@ export default function Adoption() {
     setAdoptForm(f => ({ ...f, [e.target.name]: e.target.value }))
   }
 
-  function submitAdoption(e) {
+  async function submitAdoptionForm(e) {
     e.preventDefault()
     setAdoptError('')
     setAdoptSuccess('')
-    const { name, email, phone } = adoptForm
+    const { name, email, phone, address } = adoptForm
     if (!name || name.length < 2) return setAdoptError('❌ Enter your full name.')
     if (!emailRegex.test(email)) return setAdoptError('❌ Enter a valid email address.')
     if (!phoneRegex.test(phone)) return setAdoptError('❌ Enter a valid 10-digit phone number.')
+    if (!address || address.length < 5) return setAdoptError('❌ Enter your full address.')
 
-    const adoptions = JSON.parse(localStorage.getItem('petzoneAdoptions') || '[]')
-    adoptions.push({ pet: modal.name, ...adoptForm, date: new Date().toLocaleString() })
-    localStorage.setItem('petzoneAdoptions', JSON.stringify(adoptions))
-
-    setAdoptSuccess(`✅ Adoption request for ${modal.name} submitted! We'll contact you within 48 hours.`)
-    setAdoptForm({ name: '', email: '', phone: '', reason: '' })
+    try {
+      await submitAdoption({
+        petName:        modal.name,
+        petType:        modal.type,
+        petAge:         modal.age,
+        petBreed:       modal.breed,
+        description:    adoptForm.reason,
+        applicantName:  adoptForm.name,
+        applicantEmail: adoptForm.email,
+        applicantPhone: adoptForm.phone,
+        address:        adoptForm.address,
+      })
+      setAdoptSuccess(`✅ Adoption request for ${modal.name} submitted! We'll contact you within 48 hours.`)
+      setAdoptForm({ name: '', email: '', phone: '', address: '', reason: '' })
+    } catch (err) {
+      setAdoptError(err.response?.data?.message || '❌ Submission failed. Please try again.')
+    }
   }
 
   function openModal(pet) {
     setModal(pet)
-    setAdoptForm({ name: '', email: '', phone: '', reason: '' })
+    setAdoptForm({ name: '', email: '', phone: '', address: '', reason: '' })
     setAdoptError('')
     setAdoptSuccess('')
   }
@@ -174,7 +187,7 @@ export default function Adoption() {
               <div className="modal-body px-4">
                 {adoptSuccess && <div className="alert-success-custom mb-3" style={{ display: 'block' }}>{adoptSuccess}</div>}
                 {adoptError && <div className="alert-error-custom mb-3" style={{ display: 'block' }}>{adoptError}</div>}
-                <form onSubmit={submitAdoption}>
+                <form onSubmit={submitAdoptionForm}>
                   <div className="mb-3">
                     <label className="form-label fw-semibold">Your Name *</label>
                     <input type="text" name="name" className="form-control" placeholder="Full name" value={adoptForm.name} onChange={handleAdoptChange} />
@@ -186,6 +199,10 @@ export default function Adoption() {
                   <div className="mb-3">
                     <label className="form-label fw-semibold">Phone *</label>
                     <input type="text" name="phone" className="form-control" placeholder="+91 XXXXX XXXXX" value={adoptForm.phone} onChange={handleAdoptChange} />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label fw-semibold">Address *</label>
+                    <input type="text" name="address" className="form-control" placeholder="Your full address" value={adoptForm.address} onChange={handleAdoptChange} />
                   </div>
                   <div className="mb-3">
                     <label className="form-label fw-semibold">Why do you want to adopt?</label>

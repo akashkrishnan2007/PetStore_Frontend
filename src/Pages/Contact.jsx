@@ -2,6 +2,9 @@ import { useState } from 'react'
 import Navbar from '../Components/Navbar'
 import Footer from '../Components/Footer'
 import useFadeUp from '../Components/useFadeUp'
+import { submitContact } from '../services/api'
+import Spinner from '../Components/Spinner'
+import { useAuth } from '../Context/AuthContext'
 import '../Asset/CSS/style.css'
 
 import dogcatImg from '../Asset/Images/dogcat.png'
@@ -12,14 +15,16 @@ const phoneRegex = /^(\+91[\s-]?)?[6-9]\d{9}$/
 export default function Contact() {
   useFadeUp()
   const [form, setForm] = useState({ name: '', email: '', subject: '', phone: '', message: '' })
+  const { showToast } = useAuth()
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   function handleChange(e) {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }))
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     setSuccess(false)
     setError('')
@@ -31,13 +36,18 @@ export default function Contact() {
     if (!message || message.length < 10) return showError('Please enter a message (min 10 characters).')
     if (phone && !phoneRegex.test(phone)) return showError('Please enter a valid Indian phone number.')
 
-    const contacts = JSON.parse(localStorage.getItem('petzoneContacts') || '[]')
-    contacts.push({ ...form, date: new Date().toLocaleString() })
-    localStorage.setItem('petzoneContacts', JSON.stringify(contacts))
-
-    setSuccess(true)
-    setForm({ name: '', email: '', subject: '', phone: '', message: '' })
-    setTimeout(() => setSuccess(false), 5000)
+    try {
+      setLoading(true)
+      await submitContact({ name, email, subject, phone, message })
+      setSuccess(true)
+      setForm({ name: '', email: '', subject: '', phone: '', message: '' })
+      showToast('✅ Message sent! We\'ll get back to you soon.', 'success')
+      setTimeout(() => setSuccess(false), 5000)
+    } catch (err) {
+      showError(err.response?.data?.message || 'Failed to send message. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   function showError(msg) {
@@ -93,7 +103,9 @@ export default function Contact() {
                     <label className="form-label fw-semibold">Message *</label>
                     <textarea name="message" className="form-control" rows="5" placeholder="Write your message here..." value={form.message} onChange={handleChange}></textarea>
                   </div>
-                  <button type="submit" className="btn-primary-custom w-100">Send Message 📨</button>
+                  <button type="submit" className="btn-primary-custom w-100" disabled={loading}>
+                    {loading ? <><Spinner />Sending...</> : 'Send Message 📨'}
+                  </button>
                 </form>
               </div>
             </div>

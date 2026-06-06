@@ -3,48 +3,58 @@ import { Link, useNavigate } from 'react-router-dom'
 import Navbar from '../Components/Navbar'
 import Footer from '../Components/Footer'
 import useFadeUp from '../Components/useFadeUp'
+import { registerUser } from '../services/api'
+import Spinner from '../Components/Spinner'
 import '../Asset/CSS/style.css'
 
 import dogcatImg from '../Asset/Images/dogcat.png'
 
-const nameRegex     = /^[A-Za-z ]{2,40}$/
+const nameRegex     = /^[A-Za-z ]{1,40}$/
 const emailRegex    = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const passwordRegex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).{8,}$/
-const phoneRegex    = /^(\+91[\s-]?)?[6-9]\d{9}$/
+const phoneRegex    = /^\d{10}$/
 
 export default function Signup() {
   useFadeUp()
   const navigate = useNavigate()
-  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirmPassword: '', agree: false })
-  const [showPw, setShowPw] = useState(false)
+  const [form, setForm] = useState({ firstname: '', lastname: '', email: '', phone: '', password: '', confirmPassword: '', agree: false })
+  const [showPw, setShowPw]   = useState(false)
   const [showCPw, setShowCPw] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError]     = useState('')
   const [success, setSuccess] = useState('')
+
+  const [loading, setLoading] = useState(false)
 
   function handleChange(e) {
     const { name, value, type, checked } = e.target
     setForm(f => ({ ...f, [name]: type === 'checkbox' ? checked : value }))
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     setError('')
     setSuccess('')
-    const { name, email, phone, password, confirmPassword, agree } = form
+    const { firstname, lastname, email, phone, password, confirmPassword, agree } = form
 
-    if (!nameRegex.test(name)) return showError('Enter a valid full name (letters only, 2–40 chars).')
-    if (!emailRegex.test(email)) return showError('Enter a valid email address.')
-    if (phone && !phoneRegex.test(phone)) return showError('Enter a valid 10-digit phone number.')
+    if (!nameRegex.test(firstname)) return showError('Enter a valid first name (letters only).')
+    if (!nameRegex.test(lastname))  return showError('Enter a valid last name (letters only).')
+    if (!emailRegex.test(email))    return showError('Enter a valid email address.')
+    if (!phoneRegex.test(phone))    return showError('Enter a valid 10-digit phone number (digits only).')
     if (!passwordRegex.test(password)) return showError('Password must be 8+ chars with uppercase, lowercase, and a number.')
-    if (password !== confirmPassword) return showError('Passwords do not match.')
+    if (password !== confirmPassword)  return showError('Passwords do not match.')
     if (!agree) return showError('Please agree to the Terms & Privacy Policy.')
 
-    const user = { name, email, phone, password, date: new Date().toLocaleString() }
-    localStorage.setItem('petzoneUser', JSON.stringify(user))
-
-    setSuccess(`✅ Account created successfully! Welcome, ${name}! Redirecting to login...`)
-    setForm({ name: '', email: '', phone: '', password: '', confirmPassword: '', agree: false })
-    setTimeout(() => navigate('/login'), 2500)
+    try {
+      setLoading(true)
+      await registerUser({ firstname, lastname, email, phone, password })
+      setSuccess(`✅ Account created! Welcome, ${firstname}! Redirecting to login...`)
+      setForm({ firstname: '', lastname: '', email: '', phone: '', password: '', confirmPassword: '', agree: false })
+      setTimeout(() => navigate('/login'), 2500)
+    } catch (err) {
+      showError(err.response?.data?.message || 'Registration failed. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   function showError(msg) {
@@ -69,25 +79,31 @@ export default function Signup() {
               <div className="auth-card">
                 <h2>Create Account</h2>
                 <p className="auth-sub">Join 50,000+ pet lovers on PetZone</p>
-                {error && <div className="alert-error-custom mb-3" style={{ display: 'block' }}>{error}</div>}
+                {error   && <div className="alert-error-custom mb-3"   style={{ display: 'block' }}>{error}</div>}
                 {success && <div className="alert-success-custom mb-3" style={{ display: 'block' }}>{success}</div>}
-                <form onSubmit={handleSubmit} noValidate>
-                  <div className="mb-3">
-                    <label className="form-label">Full Name *</label>
-                    <input type="text" name="name" className="form-control" placeholder="Enter your full name" value={form.name} onChange={handleChange} />
+                <form onSubmit={handleSubmit} noValidate autoComplete="off">
+                  <div className="row g-3 mb-3">
+                    <div className="col-6">
+                      <label className="form-label">First Name *</label>
+                      <input type="text" name="firstname" autoComplete="given-name" className="form-control" placeholder="First name" value={form.firstname} onChange={handleChange} />
+                    </div>
+                    <div className="col-6">
+                      <label className="form-label">Last Name *</label>
+                      <input type="text" name="lastname" autoComplete="family-name" className="form-control" placeholder="Last name" value={form.lastname} onChange={handleChange} />
+                    </div>
                   </div>
                   <div className="mb-3">
                     <label className="form-label">Email Address *</label>
-                    <input type="text" name="email" className="form-control" placeholder="Enter your email" value={form.email} onChange={handleChange} />
+                    <input type="text" name="email" autoComplete="email" className="form-control" placeholder="Enter your email" value={form.email} onChange={handleChange} />
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Phone Number</label>
-                    <input type="text" name="phone" className="form-control" placeholder="+91 XXXXX XXXXX" value={form.phone} onChange={handleChange} />
+                    <label className="form-label">Phone Number * <small style={{ color: 'var(--gray)' }}>(10 digits, no +91)</small></label>
+                    <input type="text" name="phone" autoComplete="tel" className="form-control" placeholder="9876543210" value={form.phone} onChange={handleChange} />
                   </div>
                   <div className="mb-3">
                     <label className="form-label">Password *</label>
                     <div className="password-wrapper">
-                      <input type={showPw ? 'text' : 'password'} name="password" className="form-control" placeholder="Min 8 chars, uppercase, number" value={form.password} onChange={handleChange} />
+                      <input type={showPw ? 'text' : 'password'} name="password" autoComplete="new-password" className="form-control" placeholder="Min 8 chars, uppercase, number" value={form.password} onChange={handleChange} />
                       <button type="button" className="toggle-pw" onClick={() => setShowPw(v => !v)}>{showPw ? '🙈' : '👁️'}</button>
                     </div>
                     <div style={{ fontSize: '0.78rem', color: 'var(--gray)', marginTop: '0.3rem' }}>Must contain uppercase, lowercase, and a number</div>
@@ -95,7 +111,7 @@ export default function Signup() {
                   <div className="mb-4">
                     <label className="form-label">Confirm Password *</label>
                     <div className="password-wrapper">
-                      <input type={showCPw ? 'text' : 'password'} name="confirmPassword" className="form-control" placeholder="Re-enter your password" value={form.confirmPassword} onChange={handleChange} />
+                      <input type={showCPw ? 'text' : 'password'} name="confirmPassword" autoComplete="new-password" className="form-control" placeholder="Re-enter your password" value={form.confirmPassword} onChange={handleChange} />
                       <button type="button" className="toggle-pw" onClick={() => setShowCPw(v => !v)}>{showCPw ? '🙈' : '👁️'}</button>
                     </div>
                   </div>
@@ -105,7 +121,9 @@ export default function Signup() {
                       I agree to the <Link to="/terms" style={{ color: 'var(--primary)' }}>Terms</Link> &amp; <Link to="/privacy" style={{ color: 'var(--primary)' }}>Privacy Policy</Link>
                     </label>
                   </div>
-                  <button type="submit" className="btn-primary-custom w-100">Create Account 🚀</button>
+                  <button type="submit" className="btn-primary-custom w-100" disabled={loading}>
+                    {loading ? <><Spinner />Creating Account...</> : 'Create Account 🚀'}
+                  </button>
                 </form>
                 <div className="divider mt-4">or</div>
                 <p className="text-center mt-3" style={{ fontSize: '0.9rem' }}>Already have an account? <Link to="/login" style={{ color: 'var(--primary)', fontWeight: 700 }}>Sign In</Link></p>

@@ -1,45 +1,32 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AdminSidebar from '../Components/AdminSidebar'
+import { getContacts, deleteContact } from '../services/api'
 import '../Asset/CSS/admin.css'
 
 export default function AdminMessages() {
   const navigate = useNavigate()
-  const [messages, setMessages] = useState([])
-  const [search, setSearch] = useState('')
-  const [filter, setFilter] = useState('')
-  const [selected, setSelected] = useState(null)
+  const [messages, setMessages]     = useState([])
+  const [search, setSearch]         = useState('')
+  const [filter, setFilter]         = useState('')
+  const [selected, setSelected]     = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
-  const [toast, setToast] = useState('')
+  const [toast, setToast]           = useState('')
   const [topbarDate, setTopbarDate] = useState('')
 
   useEffect(() => {
     if (!sessionStorage.getItem('petzoneAdminAuth')) { navigate('/admin'); return }
-    setMessages(JSON.parse(localStorage.getItem('petzoneContacts') || '[]'))
     setTopbarDate(new Date().toLocaleDateString('en-IN', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }))
+    getContacts().then(({ data }) => setMessages(data)).catch(() => {})
   }, [])
 
-  function save(updated) {
-    localStorage.setItem('petzoneContacts', JSON.stringify(updated))
-    setMessages(updated)
-  }
-
-  function markRead(idx) {
-    save(messages.map((m, i) => i === idx ? { ...m, read: true } : m))
-  }
-
-  function deleteMsg(idx) {
-    save(messages.filter((_, i) => i !== idx))
-    setDeleteTarget(null)
-    showToast('✅ Message deleted.')
-  }
-
-  function openMsg(msg, idx) {
-    setSelected({ ...msg, idx })
-    if (!msg.read) {
-      const updated = messages.map((m, i) => i === idx ? { ...m, read: true } : m)
-      save(updated)
-    }
+  async function deleteMsg(id) {
+    try {
+      await deleteContact(id)
+      setMessages(prev => prev.filter(m => (m._id || m) !== id))
+      setDeleteTarget(null)
+      showToast('✅ Message deleted.')
+    } catch { showToast('❌ Failed to delete.') }
   }
 
   function showToast(msg) { setToast(msg); setTimeout(() => setToast(''), 3000) }
@@ -49,8 +36,7 @@ export default function AdminMessages() {
     document.getElementById('sidebarOverlay')?.classList.toggle('show')
   }
 
-  const unread = messages.filter(m => !m.read).length
-
+  const unread   = messages.filter(m => !m.read).length
   const filtered = messages.filter(m => {
     const matchSearch = !search || m.name?.toLowerCase().includes(search.toLowerCase()) || m.subject?.toLowerCase().includes(search.toLowerCase())
     const matchFilter = !filter || (filter === 'unread' ? !m.read : m.read)
@@ -78,9 +64,9 @@ export default function AdminMessages() {
         <div className="page-content">
           <div className="row g-3 mb-4">
             {[
-              { label: 'Total Messages', num: messages.length, cls: 'orange', icon: '💬' },
-              { label: 'Unread',         num: unread,          cls: 'blue',   icon: '📩' },
-              { label: 'Read',           num: messages.length - unread, cls: 'green', icon: '📭' },
+              { label: 'Total Messages', num: messages.length,          cls: 'orange', icon: '💬' },
+              { label: 'Unread',         num: unread,                   cls: 'blue',   icon: '📩' },
+              { label: 'Read',           num: messages.length - unread, cls: 'green',  icon: '📭' },
             ].map(s => (
               <div className="col-sm-4" key={s.label}>
                 <div className={`stat-card ${s.cls}`}>
@@ -119,28 +105,25 @@ export default function AdminMessages() {
                       <tr><th>#</th><th>From</th><th>Subject</th><th>Phone</th><th>Date</th><th>Status</th><th>Actions</th></tr>
                     </thead>
                     <tbody>
-                      {filtered.map((m, i) => {
-                        const realIdx = messages.indexOf(m)
-                        return (
-                          <tr key={i} style={{ fontWeight: m.read ? 400 : 700 }}>
-                            <td>{i + 1}</td>
-                            <td>
-                              <div className="u-name">{m.name}</div>
-                              <div className="u-email">{m.email}</div>
-                            </td>
-                            <td>{m.subject}</td>
-                            <td>{m.phone || '—'}</td>
-                            <td>{m.date}</td>
-                            <td><span className={`badge-status ${m.read ? 'read' : 'new'}`}>{m.read ? 'Read' : 'New'}</span></td>
-                            <td>
-                              <div className="d-flex gap-1">
-                                <button className="btn-action btn-view" onClick={() => openMsg(m, realIdx)}>👁 View</button>
-                                <button className="btn-action btn-delete" onClick={() => setDeleteTarget(realIdx)}>🗑</button>
-                              </div>
-                            </td>
-                          </tr>
-                        )
-                      })}
+                      {filtered.map((m, i) => (
+                        <tr key={m._id || i} style={{ fontWeight: m.read ? 400 : 700 }}>
+                          <td>{i + 1}</td>
+                          <td>
+                            <div className="u-name">{m.name}</div>
+                            <div className="u-email">{m.email}</div>
+                          </td>
+                          <td>{m.subject}</td>
+                          <td>{m.phone || '—'}</td>
+                          <td>{m.date || (m.createdAt ? new Date(m.createdAt).toLocaleString() : '—')}</td>
+                          <td><span className={`badge-status ${m.read ? 'read' : 'new'}`}>{m.read ? 'Read' : 'New'}</span></td>
+                          <td>
+                            <div className="d-flex gap-1">
+                              <button className="btn-action btn-view" onClick={() => setSelected(m)}>👁 View</button>
+                              <button className="btn-action btn-delete" onClick={() => setDeleteTarget(m._id || i)}>🗑</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -159,10 +142,10 @@ export default function AdminMessages() {
                 <button className="btn-close" onClick={() => setSelected(null)}></button>
               </div>
               <div className="modal-body">
-                {[['From', selected.name], ['Email', selected.email], ['Phone', selected.phone || '—'], ['Subject', selected.subject], ['Date', selected.date]].map(([l, v]) => (
+                {[['From', selected.name], ['Email', selected.email], ['Phone', selected.phone || '—'], ['Subject', selected.subject], ['Date', selected.date || (selected.createdAt ? new Date(selected.createdAt).toLocaleString() : '—')]].map(([l, v]) => (
                   <div className="detail-row" key={l}><span className="d-label">{l}</span><span className="d-value">{v}</span></div>
                 ))}
-                <div style={{ marginTop: '1rem', padding: '1rem', background: '#f8f9fa', borderRadius: '10px', fontSize: '0.9rem', color: 'var(--dark)', lineHeight: 1.7 }}>
+                <div style={{ marginTop: '1rem', padding: '1rem', background: '#f8f9fa', borderRadius: '10px', fontSize: '0.9rem', lineHeight: 1.7 }}>
                   {selected.message}
                 </div>
               </div>

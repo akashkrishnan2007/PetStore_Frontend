@@ -6,7 +6,7 @@ import useFadeUp from '../Components/useFadeUp'
 import '../Asset/CSS/style.css'
 
 import aboutsImg from '../Asset/Images/abouts.png'
-// import akashImg from '../Asset/Images/cf0da7de-6dc3-435a-899f-92b198b6dfc3.png'
+import akashImg from '../Asset/Images/cf0da7de-6dc3-435a-899f-92b198b6dfc3.png'
 
 export default function About() {
   useFadeUp()

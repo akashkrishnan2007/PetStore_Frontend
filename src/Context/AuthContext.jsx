@@ -3,22 +3,24 @@ import { createContext, useContext, useState, useEffect } from 'react'
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('petzoneLoggedIn') || 'null'))
-  const [cart, setCart] = useState(() => JSON.parse(localStorage.getItem('petzoneCart') || '[]'))
+  const [user, setUser]   = useState(() => JSON.parse(localStorage.getItem('petzoneLoggedIn') || 'null'))
+  const [cart, setCart]   = useState(() => JSON.parse(localStorage.getItem('petzoneCart') || '[]'))
   const [toast, setToast] = useState({ msg: '', type: 'success', visible: false })
 
   useEffect(() => {
     localStorage.setItem('petzoneCart', JSON.stringify(cart))
   }, [cart])
 
-  function login(userData) {
+  function login(userData, token) {
     setUser(userData)
     localStorage.setItem('petzoneLoggedIn', JSON.stringify(userData))
+    if (token) localStorage.setItem('petzoneToken', token)
   }
 
   function logout() {
     setUser(null)
     localStorage.removeItem('petzoneLoggedIn')
+    localStorage.removeItem('petzoneToken')
   }
 
   function addToCart(item) {
@@ -30,9 +32,7 @@ export function AuthProvider({ children }) {
     showToast(`✅ ${item.name} added to cart!`, 'success')
   }
 
-  function removeFromCart(name) {
-    setCart(prev => prev.filter(i => i.name !== name))
-  }
+  function removeFromCart(name) { setCart(prev => prev.filter(i => i.name !== name)) }
 
   function updateQty(name, qty) {
     if (qty < 1) return removeFromCart(name)
