@@ -1,9 +1,9 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import ScrollToTop   from '../Components/ScrollToTop'
-import GlobalToast   from '../Components/GlobalToast'
-import BackToTop     from '../Components/BackToTop'
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import ScrollToTop    from '../Components/ScrollToTop'
+import GlobalToast    from '../Components/GlobalToast'
+import BackToTop      from '../Components/BackToTop'
 import ProtectedRoute from '../Components/ProtectedRoute'
-import AdminRoute    from '../Components/AdminRoute'
+import AdminRoute     from '../Components/AdminRoute'
 
 import Home           from '../Pages/Home'
 import About          from '../Pages/About'
@@ -28,42 +28,56 @@ import AdminAdoptions from '../Pages/AdminAdoptions'
 import AdminMessages  from '../Pages/AdminMessages'
 import AdminReports   from '../Pages/AdminReports'
 
-export default function AppRouter() {
+const AUTH_ROUTES = ['/login', '/signup', '/forgot']
+
+function Layout() {
+  const { pathname } = useLocation()
+
   return (
-    <BrowserRouter>
+    <>
       <ScrollToTop />
       <GlobalToast />
       <BackToTop />
       <Routes>
-        {/* Public routes */}
+        {/* Public */}
         <Route path="/"        element={<Home />} />
         <Route path="/about"   element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/seller"  element={<Seller />} />
-        <Route path="/login"   element={<Login />} />
-        <Route path="/signup"  element={<Signup />} />
-        <Route path="/forgot"  element={<ForgotPassword />} />
         <Route path="/adoption" element={<Adoption />} />
         <Route path="/faq"     element={<FAQ />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms"   element={<TermsConditions />} />
         <Route path="/cart"    element={<CartPage />} />
 
-        {/* Protected user routes */}
+        {/* Auth — no Navbar/Footer */}
+        <Route path="/login"   element={<Login />} />
+        <Route path="/signup"  element={<Signup />} />
+        <Route path="/forgot"  element={<ForgotPassword />} />
+
+        {/* Protected */}
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
-        {/* Admin routes */}
-        <Route path="/admin"              element={<AdminLogin />} />
-        <Route path="/admin/dashboard"    element={<AdminRoute><Dashboard /></AdminRoute>} />
-        <Route path="/admin/users"        element={<AdminRoute><AdminUsers /></AdminRoute>} />
-        <Route path="/admin/sellers"      element={<AdminRoute><AdminSellers /></AdminRoute>} />
-        <Route path="/admin/adoptions"    element={<AdminRoute><AdminAdoptions /></AdminRoute>} />
-        <Route path="/admin/messages"     element={<AdminRoute><AdminMessages /></AdminRoute>} />
-        <Route path="/admin/reports"      element={<AdminRoute><AdminReports /></AdminRoute>} />
+        {/* Admin */}
+        <Route path="/admin"           element={<AdminLogin />} />
+        <Route path="/admin/dashboard" element={<AdminRoute><Dashboard /></AdminRoute>} />
+        <Route path="/admin/users"     element={<AdminRoute><AdminUsers /></AdminRoute>} />
+        <Route path="/admin/sellers"   element={<AdminRoute><AdminSellers /></AdminRoute>} />
+        <Route path="/admin/adoptions" element={<AdminRoute><AdminAdoptions /></AdminRoute>} />
+        <Route path="/admin/messages"  element={<AdminRoute><AdminMessages /></AdminRoute>} />
+        <Route path="/admin/reports"   element={<AdminRoute><AdminReports /></AdminRoute>} />
 
         {/* 404 */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+    </>
+  )
+}
+
+export default function AppRouter() {
+  return (
+    <BrowserRouter>
+      <Layout />
     </BrowserRouter>
   )
 }
